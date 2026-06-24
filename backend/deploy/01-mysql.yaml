@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: tlias-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init-sql
+  namespace: tlias-system
+data:
+  init.sql: |
+    CREATE DATABASE IF NOT EXISTS student DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    USE student;
+
+    CREATE TABLE IF NOT EXISTS clazz (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        name        VARCHAR(50) NOT NULL,
+        room        VARCHAR(10),
+        begin_date  DATE,
+        end_date    DATE,
+        master_id   INT,
+        subject     TINYINT,
+        create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+        update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS student (
+        id               INT AUTO_INCREMENT PRIMARY KEY,
+        name             VARCHAR(32) NOT NULL,
+        no               VARCHAR(32) UNIQUE NOT NULL,
+        gender           TINYINT DEFAULT 1,
+        phone            VARCHAR(11),
+        id_card          VARCHAR(18),
+        is_college       TINYINT DEFAULT 0,
+        address          VARCHAR(100),
+        degree           TINYINT,
+        graduation_date  DATE,
+        clazz_id         INT,
+        violation_count  INT DEFAULT 0,
+        violation_score  INT DEFAULT 0,
+        create_time      DATETIME DEFAULT CURRENT_TIMESTAMP,
+        update_time      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    );
+
+    INSERT IGNORE INTO clazz (id, name, room, begin_date, end_date, master_id, subject) VALUES
+    (1, 'JavaEE就业100期', '101', '2023-04-01', '2023-12-30', 1, 1),
+    (2, 'JavaEE就业101期', '102', '2023-05-01', '2024-01-30', 2, 1);
+
+    INSERT IGNORE INTO student (id, name, no, gender, phone, id_card, is_college, address, degree, graduation_date, clazz_id) VALUES
+    (1, '张三', '2023001001', 1, '13800138001', '110101199001011234', 1, '北京市海淀区', 4, '2020-07-01', 1),
+    (2, '李四', '2023001002', 1, '13800138002', '110101199001021234', 1, '北京市朝阳区', 3, '2020-07-01', 1),
+    (3, 'Lily', '2023001003', 2, '13309230912', '110090110090110090', 0, '回龙观东大街110号', 4, '2020-07-01', 1);
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: tlias-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "123456"
+            - name: MYSQL_DATABASE
+              value: "student"
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
+            - name: init-sql
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+        - name: init-sql
+          configMap:
+            name: mysql-init-sql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: tlias-system
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+  clusterIP: None

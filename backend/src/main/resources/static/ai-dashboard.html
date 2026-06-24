@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 学情分析平台</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+  <style>
+    /* AI 仪表盘专属样式 */
+    .ai-dashboard { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    .ai-header { margin-bottom: 28px; }
+    .ai-header h1 { font-size: 1.8rem; color: #1a1a2e; display: flex; align-items: center; gap: 12px; }
+    .ai-header p { color: #6c757d; margin-top: 6px; }
+    .ai-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; }
+    .ai-status.online { background: #d4edda; color: #155724; }
+    .ai-status.offline { background: #f8d7da; color: #721c24; }
+
+    .ai-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px; }
+    .ai-card { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); overflow: hidden; transition: transform 0.2s; }
+    .ai-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.12); }
+    .ai-card-header { padding: 16px 20px; border-bottom: 1px solid #eee; font-weight: 600; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+    .ai-card-body { padding: 20px; }
+    .ai-card-footer { padding: 12px 20px; border-top: 1px solid #eee; text-align: right; }
+
+    .btn-ai { padding: 8px 20px; border: none; border-radius: 8px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; font-weight: 500; }
+    .btn-ai-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .btn-ai-primary:hover { opacity: 0.9; transform: scale(1.02); }
+    .btn-ai-success { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; }
+    .btn-ai-warning { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+    .btn-ai-info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+    .btn-ai:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .ai-result { margin-top: 16px; padding: 16px; background: #f8f9fa; border-radius: 8px; font-size: 0.9rem; max-height: 300px; overflow-y: auto; white-space: pre-wrap; font-family: 'Courier New', monospace; }
+    .ai-result.empty { color: #aaa; }
+    .ai-loading { display: inline-block; width: 16px; height: 16px; border: 2px solid #ddd; border-top-color: #667eea; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .ai-select { padding: 6px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; margin-right: 8px; }
+    .ai-input { padding: 6px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; width: 80px; }
+
+    .metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .metric-item { text-align: center; padding: 12px; background: #f8f9fa; border-radius: 8px; }
+    .metric-value { font-size: 1.6rem; font-weight: 700; color: #667eea; }
+    .metric-label { font-size: 0.8rem; color: #6c757d; margin-top: 4px; }
+
+    .recommend-list { list-style: none; padding: 0; margin: 0; }
+    .recommend-list li { padding: 10px 12px; border-left: 3px solid #667eea; margin-bottom: 8px; background: #f8f9fa; border-radius: 0 6px 6px 0; }
+    .recommend-list li .rec-type { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; margin-right: 8px; font-weight: 600; }
+    .rec-type.course { background: #cce5ff; color: #004085; }
+    .rec-type.method { background: #d4edda; color: #155724; }
+    .rec-type.material { background: #fff3cd; color: #856404; }
+    .rec-reason { font-size: 0.8rem; color: #6c757d; margin-top: 4px; }
+
+    @media (max-width: 768px) { .ai-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<div class="ai-dashboard">
+  <div class="ai-header">
+    <h1>
+      🤖 AI 学情分析平台
+      <span id="aiStatus" class="ai-status offline">🔴 检测中...</span>
+    </h1>
+    <p>基于人工智能的学员成绩预测、聚类分析、情感分析和个性化推荐系统</p>
+  </div>
+
+  <div class="ai-grid">
+    <!-- 1. 成绩查询与预测 -->
+    <div class="ai-card">
+      <div class="ai-card-header">📊 成绩查询与预测</div>
+      <div class="ai-card-body">
+        <div style="margin-bottom:12px">
+          <label>学员ID：</label>
+          <input type="number" id="studentIdInput" class="ai-input" value="1" min="1">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-ai btn-ai-primary" onclick="loadPerformance()">📋 查询成绩</button>
+          <button class="btn-ai btn-ai-warning" onclick="predictPerformance()">🔮 AI 预测</button>
+        </div>
+        <div id="performanceResult" class="ai-result empty">点击按钮查看成绩数据或AI预测结果...</div>
+      </div>
+    </div>
+
+    <!-- 2. 学员聚类分析 -->
+    <div class="ai-card">
+      <div class="ai-card-header">🔬 学员聚类分析</div>
+      <div class="ai-card-body">
+        <div style="margin-bottom:12px">
+          <label>班级ID：</label>
+          <select id="clazzSelect" class="ai-select">
+            <option value="1">JavaEE就业100期</option>
+            <option value="2">JavaEE就业101期</option>
+          </select>
+        </div>
+        <button class="btn-ai btn-ai-success" onclick="runClusterAnalysis()">📈 执行聚类分析</button>
+        <div id="clusterResult" class="ai-result empty">点击按钮对班级学员进行KMeans聚类分析...</div>
+      </div>
+    </div>
+
+    <!-- 3. 班级综合洞察 -->
+    <div class="ai-card">
+      <div class="ai-card-header">💡 班级综合洞察</div>
+      <div class="ai-card-body">
+        <div style="margin-bottom:12px">
+          <label>班级ID：</label>
+          <select id="insightClazzSelect" class="ai-select">
+            <option value="1">JavaEE就业100期</option>
+            <option value="2">JavaEE就业101期</option>
+          </select>
+        </div>
+        <button class="btn-ai btn-ai-info" onclick="runClassInsight()">🔍 生成洞察报告</button>
+        <div id="insightResult" class="ai-result empty">点击按钮生成班级综合洞察报告...</div>
+      </div>
+    </div>
+
+    <!-- 4. 个性化学习推荐 -->
+    <div class="ai-card">
+      <div class="ai-card-header">🎯 个性化学习推荐</div>
+      <div class="ai-card-body">
+        <div style="margin-bottom:12px">
+          <label>学员ID：</label>
+          <input type="number" id="recStudentIdInput" class="ai-input" value="1" min="1">
+        </div>
+        <button class="btn-ai btn-ai-primary" onclick="getRecommendations()">🎓 获取推荐</button>
+        <div id="recommendResult" class="ai-result empty">点击按钮获取AI个性化学习推荐...</div>
+      </div>
+      <div class="ai-card-footer">
+        <small style="color:#6c757d">推荐基于成绩数据和协同过滤算法</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部信息 -->
+  <div style="margin-top:40px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#aaa;font-size:0.85rem">
+    <p>AI 学情分析平台 · 数据来源于本地数据库 &amp; Python AI 服务 · Spring Boot 3.2 + Flask</p>
+    <p>
+      <a href="index.html" style="color:#667eea;text-decoration:none">← 返回学员管理系统</a>
+    </p>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/api-ext.js"></script>
+<script>
+// ===== 健康检查 =====
+async function checkAiService() {
+  const statusEl = document.getElementById('aiStatus');
+  try {
+    const res = await fetch('http://localhost:5001/api/health');
+    if (res.ok) {
+      const data = await res.json();
+      statusEl.className = 'ai-status online';
+      statusEl.innerHTML = `🟢 AI 服务在线 · ${data.message || 'OK'}`;
+    } else {
+      statusEl.className = 'ai-status offline';
+      statusEl.innerHTML = '🔴 AI 服务异常';
+    }
+  } catch {
+    statusEl.className = 'ai-status offline';
+    statusEl.innerHTML = '🔴 AI 服务未启动 (localhost:5001)';
+  }
+}
+
+// ===== 成绩查询 =====
+async function loadPerformance() {
+  const studentId = document.getElementById('studentIdInput').value;
+  const resultEl = document.getElementById('performanceResult');
+  resultEl.innerHTML = '<span class="ai-loading"></span> 查询中...';
+  try {
+    const res = await API_AI.getStudentPerformances(studentId);
+    if (res.code === 1) {
+      const data = res.data;
+      if (data && data.length > 0) {
+        let html = `共 ${data.length} 条成绩记录\n${'='.repeat(40)}\n`;
+        data.forEach(p => {
+          html += `📚 ${p.courseName}: ${p.score}分 (${p.examDate?.substring(0,10) || '未知'})\n`;
+        });
+        resultEl.innerHTML = html;
+      } else {
+        resultEl.innerHTML = '该学员暂无成绩记录';
+      }
+    } else {
+      resultEl.innerHTML = `错误: ${res.msg}`;
+    }
+  } catch (e) {
+    resultEl.innerHTML = `请求失败: ${e.message}`;
+  }
+}
+
+// ===== AI 成绩预测 =====
+async function predictPerformance() {
+  const studentId = document.getElementById('studentIdInput').value;
+  const resultEl = document.getElementById('performanceResult');
+  resultEl.innerHTML = '<span class="ai-loading"></span> AI 正在分析历史数据并进行预测...';
+  try {
+    const res = await API_AI.predictPerformance(studentId);
+    if (res.code === 1) {
+      resultEl.innerHTML = JSON.stringify(res.data, null, 2);
+    } else {
+      resultEl.innerHTML = `预测失败: ${res.data?.message || res.msg}`;
+    }
+  } catch (e) {
+    resultEl.innerHTML = `请求失败: ${e.message}`;
+  }
+}
+
+// ===== 聚类分析 =====
+async function runClusterAnalysis() {
+  const clazzId = document.getElementById('clazzSelect').value;
+  const resultEl = document.getElementById('clusterResult');
+  resultEl.innerHTML = '<span class="ai-loading"></span> AI 正在对学员进行聚类分析...';
+  try {
+    const res = await API_AI.getClusterAnalysis(clazzId);
+    if (res.code === 1) {
+      resultEl.innerHTML = JSON.stringify(res.data, null, 2);
+    } else {
+      resultEl.innerHTML = `分析失败: ${res.data?.message || res.msg}`;
+    }
+  } catch (e) {
+    resultEl.innerHTML = `请求失败: ${e.message}`;
+  }
+}
+
+// ===== 班级洞察 =====
+async function runClassInsight() {
+  const clazzId = document.getElementById('insightClazzSelect').value;
+  const resultEl = document.getElementById('insightResult');
+  resultEl.innerHTML = '<span class="ai-loading"></span> 正在生成班级综合洞察报告...';
+  try {
+    const res = await API_AI.getClassInsight(clazzId);
+    if (res.code === 1) {
+      resultEl.innerHTML = JSON.stringify(res.data, null, 2);
+    } else {
+      resultEl.innerHTML = `生成失败: ${res.data?.message || res.msg}`;
+    }
+  } catch (e) {
+    resultEl.innerHTML = `请求失败: ${e.message}`;
+  }
+}
+
+// ===== 个性化推荐 =====
+async function getRecommendations() {
+  const studentId = document.getElementById('recStudentIdInput').value;
+  const resultEl = document.getElementById('recommendResult');
+  resultEl.innerHTML = '<span class="ai-loading"></span> AI 正在生成个性化学习推荐...';
+  try {
+    const res = await API_AI.getRecommendations(studentId);
+    if (res.code === 1) {
+      resultEl.innerHTML = JSON.stringify(res.data, null, 2);
+    } else {
+      resultEl.innerHTML = `推荐失败: ${res.data?.message || res.msg}`;
+    }
+  } catch (e) {
+    resultEl.innerHTML = `请求失败: ${e.message}`;
+  }
+}
+
+// 页面加载后检测AI服务状态
+document.addEventListener('DOMContentLoaded', () => {
+  checkAiService();
+  // 每30秒检查一次服务状态
+  setInterval(checkAiService, 30000);
+});
+</script>
+</body>
+</html>

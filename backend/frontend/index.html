@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tlias 学生管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+</head>
+<body>
+
+<!-- ===== Sidebar ===== -->
+<aside class="sidebar">
+  <div class="logo">
+    <span class="icon">🎓</span>
+    <span>Tlias 管理系统</span>
+  </div>
+  <nav class="nav">
+    <div class="nav-item active" data-page="dashboard" data-title="仪表盘" data-emoji="📊">
+      <span class="emoji">📊</span><span>仪表盘</span>
+    </div>
+    <div class="nav-item" data-page="clazzes" data-title="班级管理" data-emoji="🏫">
+      <span class="emoji">🏫</span><span>班级管理</span>
+    </div>
+    <div class="nav-item" data-page="students" data-title="学员管理" data-emoji="👤">
+      <span class="emoji">👤</span><span>学员管理</span>
+    </div>
+    <div class="nav-item" data-page="reports" data-title="数据统计" data-emoji="📈">
+      <span class="emoji">📈</span><span>数据统计</span>
+    </div>
+  </nav>
+  <div class="nav-footer">🐳 Docker 部署 · v1.0</div>
+</aside>
+
+<!-- ===== Main ===== -->
+<main class="main">
+  <header class="topbar">
+    <div class="page-title">
+      <span class="emoji" id="pageTitleEmoji">📊</span>
+      <span id="pageTitle">仪表盘</span>
+    </div>
+    <div class="status-badge" id="serverStatus">
+      <span class="dot"></span>检测中...
+    </div>
+  </header>
+
+  <div class="content">
+    <div id="alert" class="alert"></div>
+
+    <!-- ============================================================ -->
+    <!-- 仪表盘 -->
+    <!-- ============================================================ -->
+    <section class="page-section active" id="dashboard">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="icon-circle blue">🏫</div>
+          <div class="info">
+            <div class="label">班级总数</div>
+            <div class="value" id="statClazzCount">—</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="icon-circle green">👤</div>
+          <div class="info">
+            <div class="label">学员总数</div>
+            <div class="value" id="statStudentCount">—</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="icon-circle orange">🐳</div>
+          <div class="info">
+            <div class="label">部署方式</div>
+            <div class="value" style="font-size:1.1rem">Docker</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="icon-circle purple">☕</div>
+          <div class="info">
+            <div class="label">技术栈</div>
+            <div class="value" style="font-size:1.1rem">Spring Boot 3</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>🚀 快捷操作</h3>
+        </div>
+        <div class="quick-actions">
+          <div class="quick-action" onclick="document.querySelectorAll('.nav-item')[1].click()">
+            <span class="emoji">🏫</span> 管理班级
+          </div>
+          <div class="quick-action" onclick="document.querySelectorAll('.nav-item')[2].click()">
+            <span class="emoji">👤</span> 管理学员
+          </div>
+          <div class="quick-action" onclick="document.querySelectorAll('.nav-item')[3].click()">
+            <span class="emoji">📈</span> 查看统计
+          </div>
+          <div class="quick-action" onclick="openAddStudent()">
+            <span class="emoji">➕</span> 添加学员
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>📋 项目信息</h3>
+        </div>
+        <table>
+          <tr><td style="width:140px;color:#6b7a8a">项目名称</td><td>Tlias 学生管理系统</td></tr>
+          <tr><td style="color:#6b7a8a">后端框架</td><td>Spring Boot 3.2 + MyBatis-Plus</td></tr>
+          <tr><td style="color:#6b7a8a">数据库</td><td>MySQL 8.0</td></tr>
+          <tr><td style="color:#6b7a8a">部署方式</td><td>Docker / Docker Compose / Kubernetes</td></tr>
+          <tr><td style="color:#6b7a8a">API 端口</td><td><code style="background:#f5f6f8;padding:2px 8px;border-radius:4px">localhost:8080</code></td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 班级管理 -->
+    <!-- ============================================================ -->
+    <section class="page-section" id="clazzes">
+      <div class="card">
+        <div class="card-header">
+          <h3>🏫 班级列表</h3>
+          <button class="btn btn-primary" onclick="openAddClazz()">➕ 添加班级</button>
+        </div>
+
+        <div class="search-bar">
+          <input type="text" id="clazzSearch" placeholder="搜索班级名称..." onkeyup="searchClazz()">
+          <button class="btn btn-primary" onclick="searchClazz()">🔍 搜索</button>
+          <button class="btn btn-outline" onclick="document.getElementById('clazzSearch').value='';searchClazz()">🔄 重置</button>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>班级名称</th><th>教室</th><th>开班日期</th><th>结课日期</th><th>状态</th><th>操作</th></tr>
+            </thead>
+            <tbody id="clazzTableBody">
+              <tr><td colspan="7" class="loading"><div class="spinner"></div>加载中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="clazzPagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 学员管理 -->
+    <!-- ============================================================ -->
+    <section class="page-section" id="students">
+      <div class="card">
+        <div class="card-header">
+          <h3>👤 学员列表</h3>
+          <button class="btn btn-primary" onclick="openAddStudent()">➕ 添加学员</button>
+        </div>
+
+        <div class="search-bar">
+          <input type="text" id="stuSearch" placeholder="搜索学员姓名..." onkeyup="searchStudent()">
+          <select id="stuDegree">
+            <option value="">全部学历</option>
+            <option value="1">初中</option>
+            <option value="2">高中</option>
+            <option value="3">大专</option>
+            <option value="4">本科</option>
+            <option value="5">硕士</option>
+            <option value="6">博士</option>
+          </select>
+          <select id="stuClazz" class="clazz-select">
+            <option value="">全部班级</option>
+          </select>
+          <button class="btn btn-primary" onclick="searchStudent()">🔍 搜索</button>
+          <button class="btn btn-outline" onclick="document.getElementById('stuSearch').value='';document.getElementById('stuDegree').value='';document.getElementById('stuClazz').value='';searchStudent()">🔄 重置</button>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>姓名</th><th>学号</th><th>性别</th><th>学历</th><th>班级</th><th>违纪扣分</th><th>手机号</th><th>操作</th></tr>
+            </thead>
+            <tbody id="studentTableBody">
+              <tr><td colspan="9" class="loading"><div class="spinner"></div>加载中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="stuPagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 数据统计 -->
+    <!-- ============================================================ -->
+    <section class="page-section" id="reports">
+      <div class="chart-grid">
+        <div class="card">
+          <div class="card-header">
+            <h3>🎓 学员学历分布</h3>
+          </div>
+          <div class="tabs">
+            <button class="tab active" data-chart="chart" onclick="switchReport(this,'degreeChartCanvas','degreeChartTable')">📊 图表</button>
+            <button class="tab" data-chart="table" onclick="switchReport(this,'degreeChartCanvas','degreeChartTable')">📋 表格</button>
+          </div>
+          <div class="chart-container">
+            <canvas id="degreeChartCanvas" style="display:block"></canvas>
+            <div id="degreeChartTable" style="display:none"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3>📊 班级人数统计</h3>
+          </div>
+          <div class="tabs">
+            <button class="tab active" data-chart="chart" onclick="switchReport(this,'countChartCanvas','countChartTable')">📊 图表</button>
+            <button class="tab" data-chart="table" onclick="switchReport(this,'countChartCanvas','countChartTable')">📋 表格</button>
+          </div>
+          <div class="chart-container">
+            <canvas id="countChartCanvas" style="display:block"></canvas>
+            <div id="countChartTable" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- ============================================================ -->
+<!-- Modal: 班级表单 -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="clazzModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="clazzFormTitle">班级信息</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="clazzForm">
+        <input type="hidden" id="clazzId">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>班级名称 *</label>
+            <input type="text" id="c_name" placeholder="如：JavaEE就业100期">
+          </div>
+          <div class="form-group">
+            <label>教室</label>
+            <input type="text" id="c_room" placeholder="如：101">
+          </div>
+          <div class="form-group">
+            <label>开班日期</label>
+            <input type="date" id="c_beginDate">
+          </div>
+          <div class="form-group">
+            <label>结课日期</label>
+            <input type="date" id="c_endDate">
+          </div>
+          <div class="form-group">
+            <label>学科</label>
+            <select id="c_subject">
+              <option value="1">Java</option>
+              <option value="2">前端</option>
+              <option value="3">大数据</option>
+              <option value="4">Python</option>
+              <option value="5">其他</option>
+            </select>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('clazzModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveClazz()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Modal: 学员表单 -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="studentModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="studentFormTitle">学员信息</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="studentForm">
+        <input type="hidden" id="studentId">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>姓名 *</label>
+            <input type="text" id="s_name" placeholder="学员姓名">
+          </div>
+          <div class="form-group">
+            <label>学号 *</label>
+            <input type="text" id="s_no" placeholder="如：2023001001">
+          </div>
+          <div class="form-group">
+            <label>性别</label>
+            <select id="s_gender">
+              <option value="1">男</option>
+              <option value="2">女</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>手机号</label>
+            <input type="text" id="s_phone" placeholder="11 位手机号">
+          </div>
+          <div class="form-group">
+            <label>学历</label>
+            <select id="s_degree">
+              <option value="">请选择</option>
+              <option value="1">初中</option>
+              <option value="2">高中</option>
+              <option value="3">大专</option>
+              <option value="4">本科</option>
+              <option value="5">硕士</option>
+              <option value="6">博士</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>所属班级</label>
+            <select id="s_clazz" class="clazz-select">
+              <option value="">请选择</option>
+            </select>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('studentModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveStudent()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- Modal: 违纪处理 -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="violationModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>⚠️ 违纪处理</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="violationId">
+      <div class="form-group">
+        <label>扣分数值 *</label>
+        <input type="number" id="violationScore" min="1" max="100" placeholder="请输入扣分数（1-100）">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('violationModal')">取消</button>
+      <button class="btn btn-warning" onclick="saveViolation()">⚠️ 确认扣分</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Scripts ===== -->
+<script src="js/api.js"></script>
+<script>
+// 渲染图表用的 canvas 引用
+document.addEventListener('DOMContentLoaded', () => {
+  const degCanvas = document.createElement('canvas');
+  degCanvas.id = 'degreeChart';
+  document.getElementById('degreeChartCanvas').replaceWith(degCanvas);
+
+  const cntCanvas = document.createElement('canvas');
+  cntCanvas.id = 'countChart';
+  document.getElementById('countChartCanvas').replaceWith(cntCanvas);
+});
+</script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

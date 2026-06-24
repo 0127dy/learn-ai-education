@@ -1,0 +1,9 @@
+# AI 学情分析服务 - Python 依赖
+# Python 3.14+ 需要较新版本才能有预编译 wheel
+flask>=3.0.0
+flask-cors>=4.0.0
+scikit-learn>=1.6.0
+numpy>=1.26.0
+pandas>=2.1.0
+jieba>=0.42.1
+gunicorn>=21.2.0
